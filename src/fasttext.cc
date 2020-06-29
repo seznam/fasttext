@@ -210,7 +210,7 @@ void FastText::saveModel(const std::string& filename) {
   ofs.close();
 }
 
-void FastText::loadModel(const std::string& filename) {
+void FastText::loadModel(const std::string& filename, const bool loadOutputMatrix /*= true*/) {
   std::ifstream ifs(filename, std::ifstream::binary);
   if (!ifs.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
@@ -218,7 +218,7 @@ void FastText::loadModel(const std::string& filename) {
   if (!checkModel(ifs)) {
     throw std::invalid_argument(filename + " has wrong file format!");
   }
-  loadModel(ifs);
+  loadModel(ifs, loadOutputMatrix);
   ifs.close();
 }
 
@@ -236,7 +236,7 @@ void FastText::buildModel() {
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
 }
 
-void FastText::loadModel(std::istream& in) {
+void FastText::loadModel(std::istream& in, const bool loadOutputMatrix /*= true*/) {
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
@@ -262,11 +262,13 @@ void FastText::loadModel(std::istream& in) {
         "See issue #332 on Github for more information.\n");
   }
 
-  in.read((char*)&args_->qout, sizeof(bool));
-  if (quant_ && args_->qout) {
-    output_ = std::make_shared<QuantMatrix>();
+  if (loadOutputMatrix) {
+    in.read((char*)&args_->qout, sizeof(bool));
+    if (quant_ && args_->qout) {
+      output_ = std::make_shared<QuantMatrix>();
+    }
+    output_->load(in);
   }
-  output_->load(in);
 
   buildModel();
 }
